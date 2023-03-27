@@ -1,1 +1,1 @@
-# random_study_byu_gpt
+# random_study_by_gpt
