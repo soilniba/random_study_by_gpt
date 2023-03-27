@@ -16,7 +16,6 @@ import requests
 from PIL import Image
 from io import BytesIO
 from loguru import logger
-from bs4 import BeautifulSoup
 from requests_toolbelt import MultipartEncoder
 from config import *
 if not openai_api_key:

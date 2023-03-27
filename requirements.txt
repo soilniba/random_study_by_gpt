@@ -1,0 +1,6 @@
+loguru==0.6.0
+openai==0.27.2
+Pillow==9.4.0
+psutil==5.9.1
+requests==2.23.0
+requests_toolbelt==0.10.1
