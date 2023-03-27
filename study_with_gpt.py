@@ -13,19 +13,21 @@ import psutil
 import hashlib
 import datetime
 import requests
-from io import BytesIO
 from PIL import Image
+from io import BytesIO
+from loguru import logger
 from bs4 import BeautifulSoup
 from requests_toolbelt import MultipartEncoder
 from config import *
 if not openai_api_key:
-    print('需要在config.py中设置openai_api_key')
+    logger.error('需要在config.py中设置openai_api_key')
     exit(1)
 openai.api_key = openai_api_key
 p = psutil.Process()                                        # 获取当前进程的Process对象
 p.nice(psutil.IDLE_PRIORITY_CLASS)                          # 设置进程为低优先级
 script_dir = os.path.dirname(os.path.realpath(__file__))    # 获取脚本所在目录的路径
 os.chdir(script_dir)                                        # 切换工作目录到脚本所在目录
+logger.add("study_with_gpt.log", format="{time} - {level} - {message}", rotation="10 MB", compression="zip")    # 添加日志文件
 
 Cookie = ''
 user_agent = 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36'
@@ -97,8 +99,8 @@ def UpdateFeishuImage(file):
     headers = {'Authorization': f'Bearer {GetFeishuToken()}'}
     headers['Content-Type'] = multi_form.content_type
     response = requests.request("POST", url, headers=headers, data=multi_form)
-    # print(response.headers['X-Tt-Logid'])  # for debug or oncall
-    # print(response.content)  # Print Response
+    # logger.debug(response.headers['X-Tt-Logid'])  # for debug or oncall
+    # logger.debug(response.content)  # Response
     responsejson = json.loads(response.text)
     if responsejson['code'] == 0:
         return responsejson['data']['image_key']
@@ -165,7 +167,7 @@ def send_error_msg(text):
         send_feishu_robot(feishu_robot_error, feishu_msg)
     if wx_robot_error:
         send_wx_robot(wx_robot_error, text)
-    print(text)
+    logger.error(text)
 
 def send_message(text, answer_key, image_key_list, image_base64_list):
     # title = '🌻小葵花妈妈课堂开课啦：'
@@ -267,7 +269,7 @@ def ask_gpt(project):
         {'role': 'system', 'content': f'你现在是{project["subcategorie"]}领域的专家,你的服务对象为30来岁有三五年工作经验的游戏策划,请在考虑他知识阅历经验的基础上提供服务,请避免太过浅显和太过常见的知识,最好是对他日后工作生活有所帮助的知识'},
         {'role': 'user', 'content': f'我希望了解一个{project["sub2categorie"]}中{project["project"]}方面的知识点,请你为我提供一段5分钟左右的学习内容,以这个知识点的中英文名称作为开头,介绍这个知识点并进行一些举例,讲解他的应用场景和优缺点,并为我提供一条扩展学习的文章(不需要链接)'},
     ]
-    print(message)
+    logger.info(message)
     try:
         response = openai.ChatCompletion.create(
             model = gpt_model,  # 对话模型的名称
@@ -278,12 +280,12 @@ def ask_gpt(project):
             # frequency_penalty = 0.0,  # [-2,2]之间，该值越大则更倾向于产生不同的内容
             # presence_penalty = 0.0,  # [-2,2]之间，该值越大则更倾向于产生不同的内容
         )
-        print(
+        logger.info(
             f"""[ChatGPT] reply={response.choices[0]['message']['content']}, total_tokens={response["usage"]["total_tokens"]}"""
         )
         return response.choices[0]['message']['content']
     except Exception as e:
-        print(e)
+        logger.error(e)
         send_error_msg(f'openai api error:{e}')
 
 def save_to_csv(project):
@@ -305,7 +307,7 @@ def save_to_csv(project):
 if __name__ == '__main__':
     for _ in range(knowledge_number):
         for project in random_project():
-            print(project)
+            logger.info(project)
             for _ in range(10):
                 if answer:= ask_gpt(project):
                     answer_key = answer.split('\n')[0]
