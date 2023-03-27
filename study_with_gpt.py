@@ -19,6 +19,9 @@ from bs4 import BeautifulSoup
 from requests_toolbelt import MultipartEncoder
 from config import openai_api_key, feishu_robot_study, feishu_robot_error, wx_robot_error, wx_robot_study, feishu_app_id, feishu_app_secret, azure_api_key
 openai.api_key = openai_api_key
+if not openai_api_key:
+    print('需要在config.py中设置openai_api_key')
+    exit(1)
 p = psutil.Process()                                        # 获取当前进程的Process对象
 p.nice(psutil.IDLE_PRIORITY_CLASS)                          # 设置进程为低优先级
 script_dir = os.path.dirname(os.path.realpath(__file__))    # 获取脚本所在目录的路径
@@ -66,8 +69,9 @@ def SearchBingImage(text, number):
                     'base64': image_base64,
                     'md5': image_md5,
                 })
-                if image_key := UpdateFeishuImage(image_bytes):
-                    image_key_list.append(image_key)
+                if feishu_app_id and feishu_app_secret:
+                    if image_key := UpdateFeishuImage(image_bytes):
+                        image_key_list.append(image_key)
                 if len(image_key_list) >= number:
                     break
             except Exception as e:
@@ -86,11 +90,9 @@ def GetFeishuToken():
 def UpdateFeishuImage(file):
     url = "https://open.feishu.cn/open-apis/im/v1/images"
     form = {'image_type': 'message',
-            'image': (file)} 
+            'image': (file)}
     multi_form = MultipartEncoder(form)
-    headers = {
-        'Authorization': 'Bearer ' + GetFeishuToken(),  ## 获取tenant_access_token, 需要替换为实际的token
-    }
+    headers = {'Authorization': f'Bearer {GetFeishuToken()}'}
     headers['Content-Type'] = multi_form.content_type
     response = requests.request("POST", url, headers=headers, data=multi_form)
     # print(response.headers['X-Tt-Logid'])  # for debug or oncall
@@ -113,7 +115,11 @@ def send_feishu_robot(feishu_robot_key, feishu_msg):
             }
         }
     })
-    response = requests.post(f'https://open.feishu.cn/open-apis/bot/v2/hook/{feishu_robot_key}', headers=headers, data=data)
+    response = requests.post(
+        f'https://open.feishu.cn/open-apis/bot/v2/hook/{feishu_robot_key}',
+        headers=headers,
+        data=data,
+    )
     return json.loads(response.text)
 
 def send_wx_robot(robot_url, markdown_msg):
@@ -124,7 +130,11 @@ def send_wx_robot(robot_url, markdown_msg):
         "msgtype": "markdown", 
         "markdown": { "content": markdown_msg },
     })
-    response = requests.post('https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=' + robot_url, headers=headers, data=data)
+    response = requests.post(
+        f'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={robot_url}',
+        headers=headers,
+        data=data,
+    )
 
 def send_wx_robot_image(robot_url, image_data):
     headers = {
@@ -134,53 +144,63 @@ def send_wx_robot_image(robot_url, image_data):
         "msgtype": "image",
         "image": image_data
     })
-    response = requests.post('https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=' + robot_url, headers=headers, data=data)
+    response = requests.post(
+        f'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={robot_url}',
+        headers=headers,
+        data=data,
+    )
 
 def send_error_msg(text):
-    text_msg = text
-    feishu_msg = {"content": []}
-    feishu_msg["content"].append([
-        {
-            "tag": "text",
-            "text": text_msg
-        },
-    ])
-    send_feishu_robot(feishu_robot_error, feishu_msg)
+    if feishu_robot_error:
+        text_msg = text
+        feishu_msg = {"content": []}
+        feishu_msg["content"].append([
+            {
+                "tag": "text",
+                "text": text_msg
+            },
+        ])
+        send_feishu_robot(feishu_robot_error, feishu_msg)
+    if wx_robot_error:
+        send_wx_robot(wx_robot_error, text)
+    print(text)
 
 def send_message(text, answer_key, image_key_list, image_base64_list):
-    title = '🌻小葵花妈妈课堂开课啦：'
+    # title = '🌻小葵花妈妈课堂开课啦：'
     search_href = f'https://www.google.com/search?q={answer_key}'
     text = re.sub('\n+', '\n', text or '')
-    feishu_msg = {"content": []}
-    # feishu_msg["title"] = title
-    feishu_msg["content"].append([
-        {
-            "tag": "text",
-            "text": text
-        },
-    ])
-    feishu_msg["content"].append([
-        {
-            "tag": "a",
-            "text": '搜索更多相关信息',
-            "href": search_href
-        },
-    ])
-    if image_key_list:
-        images = [
+    if feishu_robot_study:
+        feishu_msg = {"content": []}
+        # feishu_msg["title"] = title
+        feishu_msg["content"].append([
             {
-                "tag": "img",
-                "image_key": image_key,
-            }
-            for image_key in image_key_list
-        ]
-        feishu_msg["content"].append(images)
-    send_feishu_robot(feishu_robot_study, feishu_msg)
-    wx_msg = f'{title}\n{text}\n[搜索更多相关信息]({search_href})'
-    wx_msg = f'{text}\n[搜索更多相关信息]({search_href})'
-    # send_wx_robot(wx_robot_study, wx_msg)
-    # for image_base64 in image_base64_list:
-    #     send_wx_robot_image(wx_robot_study, image_base64)
+                "tag": "text",
+                "text": text
+            },
+        ])
+        feishu_msg["content"].append([
+            {
+                "tag": "a",
+                "text": '搜索更多相关信息',
+                "href": search_href
+            },
+        ])
+        if image_key_list:
+            images = [
+                {
+                    "tag": "img",
+                    "image_key": image_key,
+                }
+                for image_key in image_key_list
+            ]
+            feishu_msg["content"].append(images)
+        send_feishu_robot(feishu_robot_study, feishu_msg)
+    if wx_robot_study:
+        wx_msg = f'{title}\n{text}\n[搜索更多相关信息]({search_href})'
+        wx_msg = f'{text}\n[搜索更多相关信息]({search_href})'
+        send_wx_robot(wx_robot_study, wx_msg)
+        for image_base64 in image_base64_list:
+            send_wx_robot_image(wx_robot_study, image_base64)
 
 def random_project():
     with open("study_category_expand.json", "r", encoding="utf-8") as f:
@@ -282,13 +302,16 @@ def save_to_csv(project):
         writer.writerow(project)  # 追加数据
 
 if __name__ == '__main__':
+
+
     for _ in range(2):
         for project in random_project():
             print(project)
             for _ in range(10):
-                if answer := ask_gpt(project):
+                if answer:= ask_gpt(project):
                     answer_key = answer.split('\n')[0]
-                    image_key_list, image_urls, image_base64_list = SearchBingImage(answer_key, 2)
+                    if azure_api_key:
+                        image_key_list, image_urls, image_base64_list = SearchBingImage(answer_key, 2)
                     send_message(answer, answer_key, image_key_list, image_base64_list)
                     project['answer'] = answer
                     project['images'] = image_urls
