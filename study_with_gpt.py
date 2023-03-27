@@ -16,11 +16,13 @@ import requests
 from PIL import Image
 from io import BytesIO
 from loguru import logger
+from revChatGPT.V3 import Chatbot
 from requests_toolbelt import MultipartEncoder
 from config import *
 if not openai_api_key:
     logger.error('需要在config.py中设置openai_api_key')
     exit(1)
+chatbot = Chatbot(api_key=openai_api_key, engine=gpt_model, proxy=openai_proxy)
 openai.api_key = openai_api_key
 p = psutil.Process()                                        # 获取当前进程的Process对象
 p.nice(psutil.IDLE_PRIORITY_CLASS)                          # 设置进程为低优先级
@@ -264,25 +266,29 @@ def random_project():
 
 def ask_gpt(project):
     # 设置要发送到API的提示语
+    system_prompt = f'你现在是{project["subcategorie"]}领域的专家,你的服务对象为30来岁有三五年工作经验的游戏策划,请在考虑他知识阅历经验的基础上提供服务,请避免太过浅显和太过常见的知识,最好是对他日后工作生活有所帮助的知识,'
+    user_prompt = f'我希望了解一个{project["sub2categorie"]}中{project["project"]}方面的知识点,请你为我提供一段5分钟左右的学习内容,以这个知识点的中英文名称作为开头(第一行只有中英文标题),介绍这个知识点并进行一些举例,讲解他的应用场景和优缺点,并为我提供一条扩展学习的文章(不需要链接)'
     message = [
-        {'role': 'system', 'content': f'你现在是{project["subcategorie"]}领域的专家,你的服务对象为30来岁有三五年工作经验的游戏策划,请在考虑他知识阅历经验的基础上提供服务,请避免太过浅显和太过常见的知识,最好是对他日后工作生活有所帮助的知识'},
-        {'role': 'user', 'content': f'我希望了解一个{project["sub2categorie"]}中{project["project"]}方面的知识点,请你为我提供一段5分钟左右的学习内容,以这个知识点的中英文名称作为开头,介绍这个知识点并进行一些举例,讲解他的应用场景和优缺点,并为我提供一条扩展学习的文章(不需要链接)'},
+        {'role': 'system', 'content': system_prompt},
+        {'role': 'user', 'content': user_prompt},
     ]
     logger.info(message)
     try:
-        response = openai.ChatCompletion.create(
-            model = gpt_model,  # 对话模型的名称
-            messages = message,
-            # max_tokens = 4096,  # 回复最大的字符数
-            # temperature = 0.9,  # 值在[0,1]之间，越大表示回复越具有不确定性
-            # top_p = 1,
-            # frequency_penalty = 0.0,  # [-2,2]之间，该值越大则更倾向于产生不同的内容
-            # presence_penalty = 0.0,  # [-2,2]之间，该值越大则更倾向于产生不同的内容
-        )
-        logger.info(
-            f"""[ChatGPT] reply={response.choices[0]['message']['content']}, total_tokens={response["usage"]["total_tokens"]}"""
-        )
-        return response.choices[0]['message']['content']
+        # response = openai.ChatCompletion.create(
+        #     model = gpt_model,  # 对话模型的名称
+        #     messages = message,
+        #     # max_tokens = 4096,  # 回复最大的字符数
+        #     # temperature = 0.9,  # 值在[0,1]之间，越大表示回复越具有不确定性
+        #     # top_p = 1,
+        #     # frequency_penalty = 0.0,  # [-2,2]之间，该值越大则更倾向于产生不同的内容
+        #     # presence_penalty = 0.0,  # [-2,2]之间，该值越大则更倾向于产生不同的内容
+        # )
+        # reply = response.choices[0]['message']['content']
+        # tokens = response["usage"]["total_tokens"]
+        reply = chatbot.ask(system_prompt + user_prompt)
+        tokens = chatbot.get_token_count()
+        logger.info(f"[ChatGPT] reply={reply}, total_tokens={tokens}")
+        return reply
     except Exception as e:
         logger.error(e)
         send_error_msg(f'openai api error:{e}')
@@ -307,7 +313,7 @@ if __name__ == '__main__':
     for _ in range(knowledge_number):
         for project in random_project():
             logger.info(project)
-            for _ in range(10):
+            for _ in range(5):
                 if answer:= ask_gpt(project):
                     answer_key = answer.split('\n')[0]
                     if azure_api_key:
