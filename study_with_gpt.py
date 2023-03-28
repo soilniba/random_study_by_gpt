@@ -4,7 +4,6 @@ import csv
 import gzip
 import json
 import time
-import openai
 import urllib
 import random
 import string
@@ -22,8 +21,9 @@ from config import *
 if not openai_api_key:
     logger.error('需要在config.py中设置openai_api_key')
     exit(1)
-chatbot = Chatbot(api_key=openai_api_key, engine=gpt_model, proxy=openai_proxy)
-openai.api_key = openai_api_key
+# temperature: float = 0.5,         控制结果的随机性，如果希望结果更有创意可以尝试 0.9，或者希望有固定结果可以尝试 0.0
+# top_p: float = 1.0,               一个可用于代替 temperature 的参数，对应机器学习中 nucleus sampling（核采样），如果设置 0.1 意味着只考虑构成前 10% 概率质量的 tokens。 通常建议不要同时更改这两者。
+chatbot = Chatbot(api_key=openai_api_key, engine=gpt_model, proxy=openai_proxy, temperature = 0.9)
 p = psutil.Process()                                        # 获取当前进程的Process对象
 p.nice(psutil.IDLE_PRIORITY_CLASS)                          # 设置进程为低优先级
 script_dir = os.path.dirname(os.path.realpath(__file__))    # 获取脚本所在目录的路径
@@ -274,18 +274,8 @@ def ask_gpt(project):
     ]
     logger.info(message)
     try:
-        # response = openai.ChatCompletion.create(
-        #     model = gpt_model,  # 对话模型的名称
-        #     messages = message,
-        #     # max_tokens = 4096,  # 回复最大的字符数
-        #     # temperature = 0.9,  # 值在[0,1]之间，越大表示回复越具有不确定性
-        #     # top_p = 1,
-        #     # frequency_penalty = 0.0,  # [-2,2]之间，该值越大则更倾向于产生不同的内容
-        #     # presence_penalty = 0.0,  # [-2,2]之间，该值越大则更倾向于产生不同的内容
-        # )
-        # reply = response.choices[0]['message']['content']
-        # tokens = response["usage"]["total_tokens"]
-        reply = chatbot.ask(system_prompt + user_prompt)
+        chatbot.reset(system_prompt=system_prompt)
+        reply = chatbot.ask(user_prompt)
         tokens = chatbot.get_token_count()
         logger.info(f"[ChatGPT] reply={reply}, total_tokens={tokens}")
         return reply
