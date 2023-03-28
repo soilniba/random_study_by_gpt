@@ -1,2 +1,4 @@
 config.py
 study_answer_save.csv
+study_with_gpt.log
+__pycache__/
