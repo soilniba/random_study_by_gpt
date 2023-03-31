@@ -48,7 +48,7 @@ def SearchBingImage(text, number):
     if len(query) < 5:
         query = text
     headers = {"Ocp-Apim-Subscription-Key": azure_api_key}
-    url = f"https://api.bing.microsoft.com/v7.0/images/search?q={query}&count={number * 2}" #多获取几张避免出现下载不了的图片
+    url = f"https://api.bing.microsoft.com/v7.0/images/search?q={query}&count={number * 2 + 2}" #多获取几张避免出现下载不了的图片
     response = requests.get(url, headers=headers)
     data = response.json()
     if "value" in data:
