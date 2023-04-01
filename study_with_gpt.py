@@ -266,16 +266,16 @@ def random_project():
 
 def ask_gpt(project):
     # 设置要发送到API的提示语
-    system_prompt = f'你现在是{project["subcategorie"]}领域的专家,你的服务对象为30来岁有三五年工作经验的游戏策划,请在考虑他知识阅历经验的基础上提供服务,请避免太过浅显和太过常见的知识,最好是对他日后工作生活有所帮助的知识,'
-    user_prompt = f'我希望了解一个{project["sub2categorie"]}中{project["project"]}方面的知识点,请你为我提供一段5分钟左右的学习内容,以这个知识点的中英文名称作为开头(第一行只有中英文标题),介绍这个知识点并进行一些举例,讲解他的应用场景和优缺点,并为我提供一条扩展学习的文章(不需要链接)'
+    system_prompt_splice = system_prompt.format(project["subcategorie"])
+    user_prompt_splice = user_prompt.format(project["sub2categorie"], project["project"])
     message = [
-        {'role': 'system', 'content': system_prompt},
-        {'role': 'user', 'content': user_prompt},
+        {'role': 'system', 'content': system_prompt_splice},
+        {'role': 'user', 'content': user_prompt_splice},
     ]
     logger.info(message)
     try:
-        chatbot.reset(system_prompt=system_prompt)
-        reply = chatbot.ask(user_prompt)
+        chatbot.reset(system_prompt=system_prompt_splice)
+        reply = chatbot.ask(user_prompt_splice)
         tokens = chatbot.get_token_count()
         logger.info(f"[ChatGPT] reply={reply}, total_tokens={tokens}")
         return reply
