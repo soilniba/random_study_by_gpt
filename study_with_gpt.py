@@ -80,8 +80,7 @@ def DownUpImages(data, number):
             if len(image_key_list) >= number:
                 break
         except Exception as e:
-            logger.warning(f"图片下载失败: {url}\n{e}")
-            # send_error_msg(f"图片下载失败: {url}\n{e}")
+            send_error_msg(f"图片下载失败: {url}\n{e}")
     return image_key_list, image_url_list, image_base64_list
 
 def GetFeishuToken():
@@ -281,8 +280,7 @@ def ask_gpt(project):
         logger.info(f"[ChatGPT] reply={reply}, total_tokens={tokens}")
         return reply
     except Exception as e:
-        logger.warning(f'openai api error:{e}')
-        # send_error_msg(f'openai api error:{e}')
+        send_error_msg(f'openai api error:{e}')
 
 def save_to_csv(project):
     filename = 'study_answer_save.csv'
