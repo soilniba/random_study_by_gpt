@@ -172,7 +172,7 @@ def send_error_msg(text):
 
 def send_message(text, answer_key, image_key_list, image_base64_list):
     # title = '🌻小葵花妈妈课堂开课啦：'
-    search_href = f'https://www.google.com/search?q={answer_key}'
+    search_href = f'https://www.bing.com/search?q={answer_key}'
     text = re.sub('\n+', '\n', text or '')
     if feishu_robot_key := feishu_robot_study or feishu_robot_error:
         feishu_msg = {"content": []}
