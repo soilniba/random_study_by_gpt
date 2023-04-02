@@ -220,49 +220,45 @@ def random_project():
         if subcategories_index > subcategories_index_max:
             subcategories_index_max = subcategories_index
 
-    projects = []
-    # 从可用项目中随机选出一个未被忽略的项目
+    # 随机选出一个未使用的大类
     for _ in range(total_subcategories * 2):
         subcategories_key = random.choice(list(categories.keys()))
         subcategories_index = categories[subcategories_key]['index']
         if subcategories_index <= 0 or abs(subcategories_index_max - subcategories_index) >= total_subcategories * 0.6:
-            # 为子类别分配一个index
             categories[subcategories_key]['index'] = subcategories_index_max + 1
             subcategories = categories[subcategories_key]['data']
-            project_index_max = 0
-            total_projects = 0
-            for sub2categories_key in subcategories:
-                sub2categories = subcategories[sub2categories_key]
-                total_projects += len(sub2categories)
-                for project_key in sub2categories:
-                    # sub2categories[project_key] = 0
-                    project_index = sub2categories[project_key]
-                    if project_index > project_index_max:
-                        project_index_max = project_index
-            for _ in range(total_projects * 2):
-                sub2categories_key = random.choice(list(subcategories.keys()))
-                sub2categories = subcategories[sub2categories_key]
-                project_key = random.choice(list(sub2categories.keys()))
-                project_index = sub2categories[project_key]
-                if project_index <= 0 or abs(project_index_max - project_index) >= total_projects * 0.6:
-                    # 为项目分配一个index
-                    sub2categories[project_key] = project_index_max + 1
-                    projects.append({
-                        'subcategorie': subcategories_key,
-                        'sub2categorie': sub2categories_key,
-                        'project': project_key,
-                    })
-                    break
-        if projects:
-            break
+            sub2categories_key, project_key = random_subcategorie(subcategories)
 
-    # 将更新后的category.json写回文件
-    with open("study_category_expand.json", "w", encoding="utf-8") as f:
-        json.dump(categories, f, ensure_ascii=False, indent=4)
+            # 将更新后的category.json写回文件
+            with open("study_category_expand.json", "w", encoding="utf-8") as f:
+                json.dump(categories, f, ensure_ascii=False, indent=4)
+            return {
+                'subcategorie': subcategories_key,
+                'sub2categorie': sub2categories_key,
+                'project': project_key,
+            }
 
-    return projects
-
-
+def random_subcategorie(subcategories):
+    project_index_max = 0
+    total_projects = 0
+    # 先遍历一遍project总数和最大index
+    for sub2categories_key in subcategories:
+        sub2categories = subcategories[sub2categories_key]
+        total_projects += len(sub2categories)
+        for project_key in sub2categories:
+            # sub2categories[project_key] = 0
+            project_index = sub2categories[project_key]
+            if project_index > project_index_max:
+                project_index_max = project_index
+    # 再选一个最近未使用的项目
+    for _ in range(total_projects * 2):
+        sub2categories_key = random.choice(list(subcategories.keys()))
+        sub2categories = subcategories[sub2categories_key]
+        project_key = random.choice(list(sub2categories.keys()))
+        project_index = sub2categories[project_key]
+        if project_index <= 0 or abs(project_index_max - project_index) >= total_projects * 0.6:
+            sub2categories[project_key] = project_index_max + 1
+            return sub2categories_key, project_key
 
 def ask_gpt(project):
     # 设置要发送到API的提示语
@@ -300,16 +296,16 @@ def save_to_csv(project):
 
 if __name__ == '__main__':
     for _ in range(knowledge_number):
-        for project in random_project():
-            logger.info(project)
-            for _ in range(5):
-                if answer:= ask_gpt(project):
-                    answer_key = answer.split('\n')[0]
-                    if azure_api_key:
-                        image_key_list, image_urls, image_base64_list = SearchBingImage(answer_key, 2)
-                    send_message(answer, answer_key, image_key_list, image_base64_list)
-                    project['answer'] = answer
-                    project['images'] = image_urls
-                    project['time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    save_to_csv(project)
-                    break
+        project = random_project()
+        logger.info(project)
+        for _ in range(5):
+            if answer:= ask_gpt(project):
+                answer_key = answer.split('\n')[0]
+                if azure_api_key:
+                    image_key_list, image_urls, image_base64_list = SearchBingImage(answer_key, 2)
+                send_message(answer, answer_key, image_key_list, image_base64_list)
+                project['answer'] = answer
+                project['images'] = image_urls
+                project['time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                save_to_csv(project)
+                break
