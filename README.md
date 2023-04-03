@@ -37,6 +37,7 @@
     </details>
     <details align='left'>
         <summary>将config.simple.py改名为config.py并打开文件填入配置信息</summary>
+        另外也可以手动调整study_category_expand.json中的分类，按自己的好恶增删一些分类
         <img src='https://user-images.githubusercontent.com/22488208/229343261-7c280f7b-8ece-4c73-b20b-0775ecd9071a.png' width='800'/>
     </details>
     <details align='left'>
