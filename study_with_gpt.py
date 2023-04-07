@@ -184,7 +184,7 @@ def send_worktool_robot_image(robot_key, robot_group_name, markdown_msg, image_u
                 data=data,
             )
             data = json.loads(response.text)
-            if data.get('code') != 0:
+            if data.get('code') != 200:
                 send_error_msg(f'企业微信机器人发送失败: {data}')
             logger.info(response.text)
             return
