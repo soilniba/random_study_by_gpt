@@ -150,9 +150,44 @@ def send_worktool_robot(robot_key, robot_group_name, markdown_msg):
         data=data,
     )
     data = json.loads(response.text)
-    if data.get('code') != 0:
+    if data.get('code') != 200:
         send_error_msg(f'企业微信机器人发送失败: {data}')
     logger.info(response.text)
+
+def send_worktool_robot_image(robot_key, robot_group_name, markdown_msg, image_urls):
+    for image_url in image_urls:
+        filename = os.path.basename(urllib.parse.urlparse(image_url).path)
+        filetype = os.path.splitext(filename)[1]
+        if filetype in ['.png', '.jpg', '.jpeg']:
+            headers = {
+                'User-Agent': 'Apifox/1.0.0 (https://www.apifox.cn)',
+                'Content-Type': 'application/json'
+            }
+            data = json.dumps({
+            "socketType": 2,
+            "list": [
+                {
+                    "type": 218,
+                    "titleList": [
+                        robot_group_name
+                    ],
+                    "objectName": filename,
+                    "fileUrl": image_url,
+                    "fileType": "image",
+                    "extraText": markdown_msg
+                }
+            ]
+            })
+            response = requests.post(
+                f'https://worktool.asrtts.cn/wework/sendRawMessage?robotId={robot_key}',
+                headers=headers,
+                data=data,
+            )
+            data = json.loads(response.text)
+            if data.get('code') != 0:
+                send_error_msg(f'企业微信机器人发送失败: {data}')
+            logger.info(response.text)
+            return
 
 
 def send_wx_robot(wx_robot_key, markdown_msg):
@@ -198,7 +233,7 @@ def send_error_msg(text):
         send_wx_robot(wx_robot_error, text)
     logger.error(text)
 
-def send_message(text, answer_key, image_key_list, image_base64_list):
+def send_message(text, answer_key, image_key_list, image_urls, image_base64_list):
     # title = '🌻小葵花妈妈课堂开课啦：'
     search_href = f'https://www.bing.com/search?q={answer_key}'
     text = re.sub('\n+', '\n', text or '')
@@ -236,9 +271,9 @@ def send_message(text, answer_key, image_key_list, image_base64_list):
             send_wx_robot_image(wx_robot_key, image_base64)
     if worktool_robot_key:
         if worktool_robot_group_name := worktool_robot_group_study or worktool_robot_group_error:
-            search_href = urllib.parse.quote(search_href, safe=':/?&=')
-            worktool_msg = f'{text}\n了解更多:{search_href}'
-            send_worktool_robot(worktool_robot_key, worktool_robot_group_name, worktool_msg)
+            # search_href = urllib.parse.quote(search_href, safe=':/?&=')
+            # worktool_msg = f'{text}\n了解更多:{search_href}'
+            send_worktool_robot_image(worktool_robot_key, worktool_robot_group_name, text, image_urls)
 
 def random_project():
     with open("study_category_expand.json", "r", encoding="utf-8") as f:
@@ -336,7 +371,7 @@ if __name__ == '__main__':
                 answer_key = answer.split('\n')[0]
                 if azure_api_key:
                     image_key_list, image_urls, image_base64_list = SearchBingImage(answer_key, 2)
-                send_message(answer, answer_key, image_key_list, image_base64_list)
+                send_message(answer, answer_key, image_key_list, image_urls, image_base64_list)
                 project['answer'] = answer
                 project['images'] = image_urls
                 project['time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
