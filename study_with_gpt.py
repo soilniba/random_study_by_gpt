@@ -236,7 +236,8 @@ def send_message(text, answer_key, image_key_list, image_base64_list):
             send_wx_robot_image(wx_robot_key, image_base64)
     if worktool_robot_key:
         if worktool_robot_group_name := worktool_robot_group_study or worktool_robot_group_error:
-            worktool_msg = f'{text}\n[搜索更多相关信息]({search_href})'
+            search_href = urllib.parse.quote(search_href, safe=':/?&=')
+            worktool_msg = f'{text}\n了解更多:{search_href}'
             send_worktool_robot(worktool_robot_key, worktool_robot_group_name, worktool_msg)
 
 def random_project():
