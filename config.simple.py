@@ -10,6 +10,11 @@ feishu_robot_study = ''     #发送消息的机器人，不填会使用error机�
 feishu_app_id = ''
 feishu_app_secret = ''
 
+# worktool机器人，https://github.com/gallonyin/worktool
+worktool_robot_key = '' # 机器人的key
+worktool_robot_group_error = '' # 错误信息的群名
+worktool_robot_group_study = '' # 学习信息的群名
+
 # openai api相关信息
 openai_api_key = ''         # openai的key，可以使用官方的或者第三方的
 gpt_model = 'gpt-3.5-turbo' # 使用模型，推荐使用'gpt-4'，效果有明显提升

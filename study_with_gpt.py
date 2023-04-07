@@ -127,6 +127,34 @@ def send_feishu_robot(feishu_robot_key, feishu_msg):
     )
     return json.loads(response.text)
 
+def send_worktool_robot(robot_key, robot_group_name, markdown_msg):
+    headers = {
+        'User-Agent': 'Apifox/1.0.0 (https://www.apifox.cn)',
+        'Content-Type': 'application/json'
+    }
+    data = json.dumps({
+        "socketType": 2,
+        "list": [
+            {
+                "type": 203,
+                "titleList": [
+                    robot_group_name
+                ],
+                "receivedContent": markdown_msg
+            }
+        ]
+    })
+    response = requests.post(
+        f'https://worktool.asrtts.cn/wework/sendRawMessage?robotId={robot_key}',
+        headers=headers,
+        data=data,
+    )
+    data = json.loads(response.text)
+    if data.get('code') != 0:
+        send_error_msg(f'企业微信机器人发送失败: {data}')
+    logger.info(response.text)
+
+
 def send_wx_robot(wx_robot_key, markdown_msg):
     headers = {
         'Content-Type': 'application/json',
@@ -206,6 +234,10 @@ def send_message(text, answer_key, image_key_list, image_base64_list):
         send_wx_robot(wx_robot_key, wx_msg)
         for image_base64 in image_base64_list:
             send_wx_robot_image(wx_robot_key, image_base64)
+    if worktool_robot_key:
+        if worktool_robot_group_name := worktool_robot_group_study or worktool_robot_group_error:
+            worktool_msg = f'{text}\n[搜索更多相关信息]({search_href})'
+            send_worktool_robot(worktool_robot_key, worktool_robot_group_name, worktool_msg)
 
 def random_project():
     with open("study_category_expand.json", "r", encoding="utf-8") as f:
