@@ -1,4 +1,5 @@
 import os
+import io
 import re
 import csv
 import gzip
@@ -17,6 +18,7 @@ from io import BytesIO
 from loguru import logger
 from revChatGPT.V3 import Chatbot
 from requests_toolbelt import MultipartEncoder
+import azure.cognitiveservices.speech as speechsdk
 from config import *
 if not openai_api_key:
     logger.error('需要在config.py中设置openai_api_key')
@@ -80,17 +82,39 @@ def DownUpImages(data, number):
             if len(image_key_list) >= number:
                 break
         except Exception as e:
-            send_error_msg(f"图片下载失败: {url}\n{e}")
+            # send_error_msg(f"图片下载失败: {url}\n{e}")
+            logger.error(f"图片下载失败: {url}\n{e}")
     return image_key_list, image_url_list, image_base64_list
 
+feishu_token = None
 def GetFeishuToken():
-    data = json.dumps({
-        "app_id": feishu_app_id,
-        "app_secret": feishu_app_secret,
-    })
-    response = requests.post('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', headers=headers, data=data)
+    global feishu_token
+    if not feishu_token:
+        data = json.dumps({
+            "app_id": feishu_app_id,
+            "app_secret": feishu_app_secret,
+        })
+        response = requests.post('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', headers=headers, data=data)
+        responsejson = json.loads(response.text)
+        feishu_token = responsejson['tenant_access_token']
+    return feishu_token
+
+def GetFeishuChatsID(chat_name):
+    headers = {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Authorization': f'Bearer {GetFeishuToken()}',
+    }
+    response = requests.get('https://open.feishu.cn/open-apis/im/v1/chats?user_id_type=open_id&page_size=50', headers=headers)
     responsejson = json.loads(response.text)
-    return responsejson['tenant_access_token']
+    # print(responsejson['data']['items'])
+    if responsejson['code'] == 0:
+        for item in responsejson['data']['items']:
+            if chat_name in item['name']:
+                logger.info(item['name'], item['chat_id'])
+                return item['chat_id']
+        send_error_msg('未找到表情包群ID')
+    else:
+        send_error_msg('数据获取异常', responsejson['msg'])
 
 def UpdateFeishuImage(file):
     url = "https://open.feishu.cn/open-apis/im/v1/images"
@@ -107,6 +131,27 @@ def UpdateFeishuImage(file):
         return responsejson['data']['image_key']
     else:
         send_error_msg('上传图片失败', response.text)
+
+def UpdateFeishuVoice(voice_output_file_path, voice_duration):
+    with open(voice_output_file_path, 'rb') as file:
+        bytes_data = file.read()
+        form = {
+            'file_type': 'opus',
+            'file_name': 'voice.opus',
+            'duration': str(int(voice_duration)),
+            'file': ('voice.opus', io.BytesIO(bytes_data), 'audio/opus'),
+        }
+        multi_form = MultipartEncoder(form)
+        headers = {'Authorization': f'Bearer {GetFeishuToken()}'}
+        headers['Content-Type'] = multi_form.content_type
+        response = requests.request("POST", "https://open.feishu.cn/open-apis/im/v1/files", headers=headers, data=multi_form)
+        logger.debug(response.headers['X-Tt-Logid'])  # for debug or oncall
+        logger.debug(response.content)  # Response
+        responsejson = json.loads(response.text)
+        if responsejson['code'] == 0:
+            return responsejson['data']['file_key']
+        else:
+            send_error_msg(f'上传音频失败：{response.text}')
 
 def send_feishu_robot(feishu_robot_key, feishu_msg):
     headers = {
@@ -126,6 +171,29 @@ def send_feishu_robot(feishu_robot_key, feishu_msg):
         data=data,
     )
     return json.loads(response.text)
+
+
+def send_feishu_robot_audio(chat_id, voice_key):
+    headers = {
+        'Authorization': f'Bearer {GetFeishuToken()}',
+        'Content-Type': 'application/json',
+    }
+    data = json.dumps({
+        "receive_id": chat_id,
+        "content": json.dumps({
+            "file_key": voice_key,
+        }),
+        "msg_type": "audio"
+    })
+    response = requests.post(
+        'https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id',
+        headers = headers,
+        data = data,
+    )
+    resp_json = json.loads(response.text)
+    if resp_json.get('code') != 0:
+        send_error_msg(resp_json)
+    return resp_json
 
 def send_worktool_robot(robot_key, robot_group_name, markdown_msg):
     headers = {
@@ -233,7 +301,7 @@ def send_error_msg(text):
         send_wx_robot(wx_robot_error, text)
     logger.error(text)
 
-def send_message(text, answer_key, image_key_list, image_urls, image_base64_list):
+def send_message(text, answer_key, image_key_list, image_urls, image_base64_list, voice_key):
     # title = '🌻小葵花妈妈课堂开课啦：'
     search_href = f'https://www.bing.com/search?q={answer_key}'
     text = re.sub('\n+', '\n', text or '')
@@ -254,15 +322,16 @@ def send_message(text, answer_key, image_key_list, image_urls, image_base64_list
             },
         ])
         if image_key_list:
-            images = [
+            feishu_msg["content"].append([
                 {
                     "tag": "img",
                     "image_key": image_key,
                 }
                 for image_key in image_key_list
-            ]
-            feishu_msg["content"].append(images)
+            ])
         send_feishu_robot(feishu_robot_key, feishu_msg)
+        if voice_key:
+            send_feishu_robot_audio(GetFeishuChatsID(feishu_group_name), voice_key)
     if wx_robot_key := wx_robot_study or wx_robot_error:
         # wx_msg = f'{title}\n{text}\n[搜索更多相关信息]({search_href})'
         wx_msg = f'{text}\n[搜索更多相关信息]({search_href})'
@@ -346,6 +415,39 @@ def ask_gpt(project):
     except Exception as e:
         send_error_msg(f'openai api error:{e}')
 
+def text_to_voice(text):
+    # 设置语音合成的配置
+    speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
+    # 注意：语音设置不会覆盖输入 SSML 中的语音元素。
+    speech_config.speech_synthesis_voice_name = "zh-CN-sichuan-YunxiNeural"
+    # 设置输出格式为 Ogg48Khz16BitMonoOpus
+    speech_config.set_speech_synthesis_output_format(speechsdk.SpeechSynthesisOutputFormat['Ogg48Khz16BitMonoOpus'])
+
+    # 将音频输出配置设置为内存流，而不是文件
+    voice_output_file_path = 'voice_output_tmp'
+    audio_config = speechsdk.audio.AudioOutputConfig(filename=voice_output_file_path)
+
+    # 使用语音合成器将文本合成为音频流
+    speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+    result = speech_synthesizer.speak_text_async(text).get()
+
+    # 检查合成结果
+    if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+        # 获取音频持续时间
+        duration = result.audio_duration.total_seconds() * 1000
+        logger.info(
+            f"成功合成文本 [{text[:30]}] 的语音。音频时长为 {duration} 毫秒"
+        )
+        return voice_output_file_path, duration
+    elif result.reason == speechsdk.ResultReason.Canceled:
+        # 如果合成被取消，则记录错误信息
+        cancellation_details = result.cancellation_details
+        logger.error(f"语音合成被取消：{cancellation_details.reason}")
+        if cancellation_details.reason == speechsdk.CancellationReason.Error:
+            logger.error(f"错误详情：{cancellation_details.error_details}")
+
+
+
 def save_to_csv(project):
     filename = 'study_answer_save.csv'
 
@@ -371,7 +473,11 @@ if __name__ == '__main__':
                 answer_key = answer.split('\n')[0]
                 if azure_api_key:
                     image_key_list, image_urls, image_base64_list = SearchBingImage(answer_key, 2)
-                send_message(answer, answer_key, image_key_list, image_urls, image_base64_list)
+                if speech_key and service_region:
+                    voice_output_file_path, voice_duration = text_to_voice(answer)
+                    if voice_output_file_path and voice_duration:
+                        voice_key = UpdateFeishuVoice(voice_output_file_path, voice_duration)
+                send_message(answer, answer_key, image_key_list, image_urls, image_base64_list, voice_key)
                 project['answer'] = answer
                 project['images'] = image_urls
                 project['time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
