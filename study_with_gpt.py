@@ -41,7 +41,7 @@ headers = {
     'Accept-Encoding': 'gzip',
 }
 
-def SearchBingImage(text, number):
+def search_bing_image(text, number):
     # 去除中文字符
     regex = re.compile(
         f'[{re.escape(string.punctuation + string.whitespace + string.digits)}]'
@@ -54,9 +54,9 @@ def SearchBingImage(text, number):
     response = requests.get(url, headers=headers)
     data = response.json()
     if "value" in data:
-        return DownUpImages(data, number)
+        return down_up_images(data, number)
 
-def DownUpImages(data, number):
+def down_up_images(data, number):
     image_urls = [item["contentUrl"] for item in data["value"]]
     image_key_list = []
     image_base64_list = []
@@ -77,7 +77,7 @@ def DownUpImages(data, number):
             })
             image_url_list.append(url)
             if feishu_app_id and feishu_app_secret:
-                if image_key := UpdateFeishuImage(image_bytes):
+                if image_key := update_feishu_image(image_bytes):
                     image_key_list.append(image_key)
             if len(image_key_list) >= number:
                 break
@@ -87,7 +87,7 @@ def DownUpImages(data, number):
     return image_key_list, image_url_list, image_base64_list
 
 feishu_token = None
-def GetFeishuToken():
+def get_feishu_token():
     global feishu_token
     if not feishu_token:
         data = json.dumps({
@@ -99,10 +99,10 @@ def GetFeishuToken():
         feishu_token = responsejson['tenant_access_token']
     return feishu_token
 
-def GetFeishuChatsID(chat_name):
+def get_feishu_chats_id(chat_name):
     headers = {
         'Content-Type': 'application/json; charset=utf-8',
-        'Authorization': f'Bearer {GetFeishuToken()}',
+        'Authorization': f'Bearer {get_feishu_token()}',
     }
     response = requests.get('https://open.feishu.cn/open-apis/im/v1/chats?user_id_type=open_id&page_size=50', headers=headers)
     responsejson = json.loads(response.text)
@@ -116,12 +116,12 @@ def GetFeishuChatsID(chat_name):
     else:
         send_error_msg('数据获取异常', responsejson['msg'])
 
-def UpdateFeishuImage(file):
+def update_feishu_image(file):
     url = "https://open.feishu.cn/open-apis/im/v1/images"
     form = {'image_type': 'message',
             'image': (file)}
     multi_form = MultipartEncoder(form)
-    headers = {'Authorization': f'Bearer {GetFeishuToken()}'}
+    headers = {'Authorization': f'Bearer {get_feishu_token()}'}
     headers['Content-Type'] = multi_form.content_type
     response = requests.request("POST", url, headers=headers, data=multi_form)
     # logger.debug(response.headers['X-Tt-Logid'])  # for debug or oncall
@@ -132,7 +132,7 @@ def UpdateFeishuImage(file):
     else:
         send_error_msg('上传图片失败', response.text)
 
-def UpdateFeishuVoice(voice_output_file_path, voice_duration):
+def update_feishu_voice(voice_output_file_path, voice_duration):
     with open(voice_output_file_path, 'rb') as file:
         bytes_data = file.read()
         form = {
@@ -142,7 +142,7 @@ def UpdateFeishuVoice(voice_output_file_path, voice_duration):
             'file': ('voice.opus', io.BytesIO(bytes_data), 'audio/opus'),
         }
         multi_form = MultipartEncoder(form)
-        headers = {'Authorization': f'Bearer {GetFeishuToken()}'}
+        headers = {'Authorization': f'Bearer {get_feishu_token()}'}
         headers['Content-Type'] = multi_form.content_type
         response = requests.request("POST", "https://open.feishu.cn/open-apis/im/v1/files", headers=headers, data=multi_form)
         logger.debug(response.headers['X-Tt-Logid'])  # for debug or oncall
@@ -175,7 +175,7 @@ def send_feishu_robot(feishu_robot_key, feishu_msg):
 
 def send_feishu_robot_audio(chat_id, voice_key):
     headers = {
-        'Authorization': f'Bearer {GetFeishuToken()}',
+        'Authorization': f'Bearer {get_feishu_token()}',
         'Content-Type': 'application/json',
     }
     data = json.dumps({
@@ -331,7 +331,7 @@ def send_message(text, answer_key, image_key_list, image_urls, image_base64_list
             ])
         send_feishu_robot(feishu_robot_key, feishu_msg)
         if voice_key:
-            send_feishu_robot_audio(GetFeishuChatsID(feishu_group_name), voice_key)
+            send_feishu_robot_audio(get_feishu_chats_id(feishu_group_name), voice_key)
     if wx_robot_key := wx_robot_study or wx_robot_error:
         # wx_msg = f'{title}\n{text}\n[搜索更多相关信息]({search_href})'
         wx_msg = f'{text}\n[搜索更多相关信息]({search_href})'
@@ -472,11 +472,11 @@ if __name__ == '__main__':
             if answer:= ask_gpt(project):
                 answer_key = answer.split('\n')[0]
                 if azure_api_key:
-                    image_key_list, image_urls, image_base64_list = SearchBingImage(answer_key, 2)
+                    image_key_list, image_urls, image_base64_list = search_bing_image(answer_key, 2)
                 if speech_key and service_region:
                     voice_output_file_path, voice_duration = text_to_voice(answer)
                     if voice_output_file_path and voice_duration:
-                        voice_key = UpdateFeishuVoice(voice_output_file_path, voice_duration)
+                        voice_key = update_feishu_voice(voice_output_file_path, voice_duration)
                 send_message(answer, answer_key, image_key_list, image_urls, image_base64_list, voice_key)
                 project['answer'] = answer
                 project['images'] = image_urls
