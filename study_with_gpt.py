@@ -428,6 +428,7 @@ def text_to_voice(text):
         {'start' : '<voice name="zh-CN-YunxiNeural"><mstts:express-as role="Boy">', 'end' : '</mstts:express-as></voice>'},                # 男孩-云希
     ]
     ssml_tag_add = random.choice(ssml_tag_list)
+    logger.info(f'随机音色{ssml_tag_add["start"]}')
     ssml_text = f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="zh-CN">{ssml_tag_add["start"]}<prosody rate="+20.00%">{text}</prosody>{ssml_tag_add["end"]}</speak>'
 
     # 设置输出格式为 Ogg48Khz16BitMonoOpus
