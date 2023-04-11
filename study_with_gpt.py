@@ -112,7 +112,7 @@ def get_feishu_chats_id(chat_name):
             if chat_name in item['name']:
                 logger.info(item['name'], item['chat_id'])
                 return item['chat_id']
-        send_error_msg('未找到表情包群ID')
+        send_error_msg(f'未找到群[{chat_name}]')
     else:
         send_error_msg('数据获取异常', responsejson['msg'])
 
@@ -419,7 +419,17 @@ def text_to_voice(text):
     # 设置语音合成的配置
     speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
     # 注意：语音设置不会覆盖输入 SSML 中的语音元素。
-    speech_config.speech_synthesis_voice_name = "zh-CN-sichuan-YunxiNeural"
+    ssml_tag_list = [
+        {'start' : '<voice name="zh-CN-XiaochenNeural">', 'end' : '</voice>'},         # 少女-晓辰
+        {'start' : '<voice name="zh-CN-XiaoyanNeural">', 'end' : '</voice>'},          # 少女-晓颜
+        {'start' : '<voice name="zh-CN-XiaoyouNeural">', 'end' : '</voice>'},          # 萝莉-晓悠
+        {'start' : '<voice name="zh-CN-XiaoshuangNeural">', 'end' : '</voice>'},       # 萝莉-晓双
+        {'start' : '<voice name="zh-CN-sichuan-YunxiNeural">', 'end' : '</voice>'},    # 西南官话-云希
+        {'start' : '<voice name="zh-CN-YunxiNeural"><mstts:express-as role="Boy">', 'end' : '</mstts:express-as></voice>'},                # 男孩-云希
+    ]
+    ssml_tag_add = random.choice(ssml_tag_list)
+    ssml_text = f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="zh-CN">{ssml_tag_add["start"]}<prosody rate="+20.00%">{text}</prosody>{ssml_tag_add["end"]}</speak>'
+
     # 设置输出格式为 Ogg48Khz16BitMonoOpus
     speech_config.set_speech_synthesis_output_format(speechsdk.SpeechSynthesisOutputFormat['Ogg48Khz16BitMonoOpus'])
 
@@ -429,14 +439,14 @@ def text_to_voice(text):
 
     # 使用语音合成器将文本合成为音频流
     speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
-    result = speech_synthesizer.speak_text_async(text).get()
+    result = speech_synthesizer.speak_ssml_async(ssml_text).get()
 
     # 检查合成结果
     if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
         # 获取音频持续时间
         duration = result.audio_duration.total_seconds() * 1000
         logger.info(
-            f"成功合成文本 [{text[:30]}] 的语音。音频时长为 {duration} 毫秒"
+            f"成功合成文本 [{text[:10]}] 的语音。音频时长为 {duration} 毫秒"
         )
         return voice_output_file_path, duration
     elif result.reason == speechsdk.ResultReason.Canceled:
@@ -445,8 +455,7 @@ def text_to_voice(text):
         logger.error(f"语音合成被取消：{cancellation_details.reason}")
         if cancellation_details.reason == speechsdk.CancellationReason.Error:
             logger.error(f"错误详情：{cancellation_details.error_details}")
-
-
+        return None, None
 
 def save_to_csv(project):
     filename = 'study_answer_save.csv'
