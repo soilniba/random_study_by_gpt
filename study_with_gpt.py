@@ -421,8 +421,6 @@ def text_to_voice(text):
     # 注意：语音设置不会覆盖输入 SSML 中的语音元素。
     ssml_tag_list = [
         {'start' : '<voice name="zh-CN-XiaochenNeural">', 'end' : '</voice>'},         # 少女-晓辰
-        # {'start' : '<voice name="zh-CN-XiaoyanNeural">', 'end' : '</voice>'},          # 少女-晓颜
-        # {'start' : '<voice name="zh-CN-XiaoyouNeural">', 'end' : '</voice>'},          # 萝莉-晓悠
         {'start' : '<voice name="zh-CN-XiaoshuangNeural">', 'end' : '</voice>'},       # 萝莉-晓双
         # {'start' : '<voice name="zh-CN-sichuan-YunxiNeural">', 'end' : '</voice>'},    # 西南官话-云希
         {'start' : '<voice name="zh-CN-YunxiNeural"><mstts:express-as role="Boy">', 'end' : '</mstts:express-as></voice>'},                # 男孩-云希
