@@ -422,6 +422,7 @@ def text_to_voice(text):
     ssml_tag_list = [
         {'start' : '<voice name="zh-CN-XiaochenNeural">', 'end' : '</voice>'},         # 少女-晓辰
         {'start' : '<voice name="zh-CN-XiaoshuangNeural">', 'end' : '</voice>'},       # 萝莉-晓双
+        {'start' : '<voice name="zh-TW-HsiaoChenNeural">', 'end' : '</voice>'},        # 台湾普通话-曉臻
         # {'start' : '<voice name="zh-CN-sichuan-YunxiNeural">', 'end' : '</voice>'},    # 西南官话-云希
         {'start' : '<voice name="zh-CN-YunxiNeural"><mstts:express-as role="Boy">', 'end' : '</mstts:express-as></voice>'},                # 男孩-云希
         {'start' : '<voice name="zh-CN-YunzeNeural"><mstts:express-as role="Default">', 'end' : '</mstts:express-as></voice>'},            # 中老年-云泽
