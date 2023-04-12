@@ -429,7 +429,7 @@ def text_to_voice(text):
     ]
     ssml_tag_add = random.choice(ssml_tag_list)
     logger.info(f'随机音色{ssml_tag_add["start"]}')
-    ssml_text = f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="zh-CN">{ssml_tag_add["start"]}<prosody rate="+20.00%">{text}</prosody>{ssml_tag_add["end"]}</speak>'
+    ssml_text = f'<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="zh-CN">{ssml_tag_add["start"]}<prosody rate="+20.00%">{text}</prosody>{ssml_tag_add["end"]}</speak>'
 
     # 设置输出格式为 Ogg48Khz16BitMonoOpus
     speech_config.set_speech_synthesis_output_format(speechsdk.SpeechSynthesisOutputFormat['Ogg48Khz16BitMonoOpus'])
