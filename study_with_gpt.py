@@ -20,6 +20,10 @@ from revChatGPT.V3 import Chatbot
 from requests_toolbelt import MultipartEncoder
 import azure.cognitiveservices.speech as speechsdk
 from config import *
+
+filename_ext = os.path.basename(__file__)
+file_name, file_ext = os.path.splitext(filename_ext)
+logger.add(f"{file_name}.log", format="{time} - {level} - {message}", rotation="10 MB", compression="zip")    # 添加日志文件
 if not openai_api_key:
     logger.error('需要在config.py中设置openai_api_key')
     exit(1)
@@ -30,7 +34,6 @@ p = psutil.Process()                                        # 获取当前进程
 p.nice(psutil.IDLE_PRIORITY_CLASS)                          # 设置进程为低优先级
 script_dir = os.path.dirname(os.path.realpath(__file__))    # 获取脚本所在目录的路径
 os.chdir(script_dir)                                        # 切换工作目录到脚本所在目录
-logger.add("study_with_gpt.log", format="{time} - {level} - {message}", rotation="10 MB", compression="zip")    # 添加日志文件
 
 Cookie = ''
 user_agent = 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36'
@@ -329,9 +332,9 @@ def send_message(text, answer_key, image_key_list, image_urls, image_base64_list
                 }
                 for image_key in image_key_list
             ])
-        send_feishu_robot(feishu_robot_key, feishu_msg)
         if voice_key:
             send_feishu_robot_audio(get_feishu_chats_id(feishu_group_name), voice_key)
+        send_feishu_robot(feishu_robot_key, feishu_msg)
     if wx_robot_key := wx_robot_study or wx_robot_error:
         # wx_msg = f'{title}\n{text}\n[搜索更多相关信息]({search_href})'
         wx_msg = f'{text}\n[搜索更多相关信息]({search_href})'
@@ -454,10 +457,9 @@ def text_to_voice(text):
     elif result.reason == speechsdk.ResultReason.Canceled:
         # 如果合成被取消，则记录错误信息
         cancellation_details = result.cancellation_details
-        logger.error(f"语音合成被取消：{cancellation_details.reason}")
+        send_error_msg(f"语音合成被取消：{cancellation_details.reason}")
         if cancellation_details.reason == speechsdk.CancellationReason.Error:
-            logger.error(f"错误详情：{cancellation_details.error_details}")
-        return None, None
+            send_error_msg(f"错误详情：{cancellation_details.error_details}")
 
 def save_to_csv(project):
     filename = 'study_answer_save.csv'
@@ -485,7 +487,7 @@ if __name__ == '__main__':
                 if azure_api_key:
                     image_key_list, image_urls, image_base64_list = search_bing_image(answer_key, 2)
                 if speech_key and service_region:
-                    voice_output_file_path, voice_duration = text_to_voice(answer)
+                    voice_output_file_path, voice_duration = text_to_voice(answer) or (None, None)
                     if voice_output_file_path and voice_duration:
                         voice_key = update_feishu_voice(voice_output_file_path, voice_duration)
                 send_message(answer, answer_key, image_key_list, image_urls, image_base64_list, voice_key)
@@ -494,3 +496,4 @@ if __name__ == '__main__':
                 project['time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 save_to_csv(project)
                 break
+            time.sleep(10)
