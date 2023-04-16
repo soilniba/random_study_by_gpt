@@ -30,3 +30,16 @@ user_prompt = '我希望了解一个{}中{}方面的知识点,请你为我提供
 # azure文本转语音服务的key和地区，可以在https://azure.microsoft.com/zh-cn/free/免费申请
 speech_key = ''
 service_region = ''
+
+# 语音合成声音的ssml模板，
+# 可以在 https://speech.microsoft.com/portal/9214687925c94108a70fc6993f311141/voicegallery 查看声音模板
+# 可以在 https://speech.microsoft.com/portal/9214687925c94108a70fc6993f311141/audiocontentcreation/file?voiceId=383b7b38-8e3c-4ac1-a64c-8387ddee905e&languageCode=zh-CN-sichuan 生成ssml模板
+ssml_templete = [
+    '<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="zh-CN"><voice name="zh-CN-XiaochenNeural"><prosody rate="+20.00%">{}</prosody></voice></speak>', # 少女-晓辰
+    '<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="zh-CN"><voice name="zh-CN-XiaoshuangNeural"><prosody rate="+20.00%">{}</prosody></voice></speak>', # 少女-晓双
+    '<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="zh-TW"><voice name="zh-TW-HsiaoChenNeural"><prosody rate="+20.00%">{}</prosody></voice></speak>', # 台湾普通话-曉臻
+    '<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="zh-CN"><voice name="zh-CN-sichuan-YunxiNeural"><prosody rate="+20.00%">{}</prosody></voice></speak>', # 西南官话-云希
+    '<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="zh-CN"><voice name="zh-CN-YunxiNeural"><mstts:express-as role="Boy"><prosody rate="+20.00%">{}</prosody></mstts:express-as></voice></speak>', # 男孩-云希
+    '<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="zh-CN"><voice name="zh-CN-YunzeNeural"><mstts:express-as role="Default"><prosody rate="+20.00%">{}</prosody></mstts:express-as></voice></speak>', # 中老年-云泽
+    '<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="zh-CN"><voice name="zh-CN-YunyangNeural"><mstts:express-as style="narration-professional" styledegree="2"><prosody rate="+20.00%">{}</prosody></mstts:express-as></voice></speak>', # 播音腔旁白-云扬
+]

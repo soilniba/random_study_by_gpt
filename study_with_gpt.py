@@ -444,18 +444,9 @@ def text_to_voice(text):
     # 设置语音合成的配置
     speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
     # 注意：语音设置不会覆盖输入 SSML 中的语音元素。
-    ssml_tag_list = [
-        {'start' : '<voice name="zh-CN-XiaochenNeural">', 'end' : '</voice>'},         # 少女-晓辰
-        {'start' : '<voice name="zh-CN-XiaoshuangNeural">', 'end' : '</voice>'},       # 萝莉-晓双
-        {'start' : '<voice name="zh-TW-HsiaoChenNeural">', 'end' : '</voice>'},        # 台湾普通话-曉臻
-        # {'start' : '<voice name="zh-CN-sichuan-YunxiNeural">', 'end' : '</voice>'},    # 西南官话-云希
-        {'start' : '<voice name="zh-CN-YunxiNeural"><mstts:express-as role="Boy">', 'end' : '</mstts:express-as></voice>'},                # 男孩-云希
-        {'start' : '<voice name="zh-CN-YunzeNeural"><mstts:express-as role="Default">', 'end' : '</mstts:express-as></voice>'},            # 中老年-云泽
-        {'start' : '<voice name="zh-CN-YunyangNeural"><mstts:express-as style="narration-professional" styledegree="2">', 'end' : '</mstts:express-as></voice>'},            # 播音腔旁白-云扬
-    ]
-    ssml_tag_add = random.choice(ssml_tag_list)
-    logger.info(f'随机音色{ssml_tag_add["start"]}')
-    ssml_text = f'<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="zh-CN">{ssml_tag_add["start"]}<prosody rate="+20.00%">{text}</prosody>{ssml_tag_add["end"]}</speak>'
+    ssml_format = random.choice(ssml_templete)
+    logger.info(f'随机音色{ssml_format}')
+    ssml_text = ssml_format.format(text)
 
     # 设置输出格式为 Ogg48Khz16BitMonoOpus
     speech_config.set_speech_synthesis_output_format(speechsdk.SpeechSynthesisOutputFormat['Ogg48Khz16BitMonoOpus'])
