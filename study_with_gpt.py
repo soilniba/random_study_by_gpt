@@ -521,6 +521,7 @@ if __name__ == '__main__':
             if answer:= ask_gpt(project):
                 answer_key = answer.split('\n')[0]
                 voice_key = None
+                voice_http_url = None
                 if azure_api_key:
                     image_key_list, image_urls, image_base64_list = search_bing_image(answer_key, 2) or (None, [], None)
                 if speech_key and service_region:
