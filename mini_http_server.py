@@ -6,7 +6,7 @@ import cgi
 # DIRECTORY = os.path.join(os.path.dirname(__file__), 'public')
 DIRECTORY = "publicfiles"
 PORT = 40080
-SAFE_FILE_EXT = '.flac'
+SAFE_FILE_EXT = '.mp3'
 os.chdir(DIRECTORY)
 
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
@@ -30,7 +30,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def translate_path(self, path):
         # Get file name from URL path
         file_name, file_ext = os.path.splitext(os.path.basename(path))
-        if "music" not in file_name.lower() or file_ext.lower() != SAFE_FILE_EXT:
+        if "voice" not in file_name.lower() or file_ext.lower() != SAFE_FILE_EXT:
             return ''
 
         # Get file path
@@ -50,7 +50,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             filename = self.headers.get('filename', '').lower() + SAFE_FILE_EXT
 
             # 检查文件名中是否包含'required_string'
-            if 'music' not in filename:
+            if 'voice' not in filename:
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(b'File name does not contain required string')

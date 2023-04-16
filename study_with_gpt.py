@@ -16,6 +16,7 @@ import requests
 from PIL import Image
 from io import BytesIO
 from loguru import logger
+from pydub import AudioSegment
 from revChatGPT.V3 import Chatbot
 from requests_toolbelt import MultipartEncoder
 import azure.cognitiveservices.speech as speechsdk
@@ -170,6 +171,29 @@ def update_feishu_voice(voice_output_file_path, voice_duration):
         else:
             send_error_msg(f'上传音频失败：{response.text}')
 
+# 将Ogg音频数据转换为mp3音频数据
+def ogg_to_mp3(voice_output_file_path):
+    # 将Ogg数据加载到AudioSegment对象中
+    ogg_audio = AudioSegment.from_file(voice_output_file_path, format="ogg")
+    # 将AudioSegment对象转换为mp3格式的音频数据
+    mp3_audio = ogg_audio.export(format="mp3")
+    # 返回mp3格式的音频数据
+    return mp3_audio.read()
+
+def upload_voice_file(voice_output_file_path, voice_duration):
+    if not voice_file_server:
+        return
+    if mp3_data := ogg_to_mp3(voice_output_file_path):
+        now = datetime.datetime.now() # 获取当前日期和时间
+        date_time_str = now.strftime("%Y%m%d%H%M%S")
+        filename = f'voice{date_time_str}'
+        headers = {"filename": filename}
+        files = {'file': (filename, mp3_data, 'audio/mp3')}
+        response = requests.post(f'{voice_file_server}/upload', files=files, headers=headers)
+        if response.status_code != 200:
+            return send_error_msg(f'上传音频失败：{response.text}')
+        return f'{voice_file_server}/read/{filename}.mp3'
+
 def send_feishu_robot(feishu_robot_key, feishu_msg):
     headers = {
         'Content-Type': 'application/json',
@@ -242,44 +266,42 @@ def send_worktool_robot(robot_key, robot_group_name, markdown_msg):
         send_error_msg(f'企业微信机器人发送失败: {data}')
     logger.info(response.text)
 
-def send_worktool_robot_image(robot_key, robot_group_name, markdown_msg, image_urls):
-    if not image_urls:
+def send_worktool_robot_file(robot_key, robot_group_name, markdown_msg, file_url, type):
+    if not file_url:
         send_worktool_robot(robot_key, robot_group_name, markdown_msg)
         return
-    for image_url in image_urls:
-        filename = os.path.basename(urllib.parse.urlparse(image_url).path)
-        filetype = os.path.splitext(filename)[1]
-        if filetype in ['.png', '.jpg', '.jpeg']:
-            headers = {
-                'User-Agent': 'Apifox/1.0.0 (https://www.apifox.cn)',
-                'Content-Type': 'application/json'
-            }
-            data = json.dumps({
-            "socketType": 2,
-            "list": [
-                {
-                    "type": 218,
-                    "titleList": [
-                        robot_group_name
-                    ],
-                    "objectName": filename,
-                    "fileUrl": image_url,
-                    "fileType": "image",
-                    "extraText": markdown_msg
-                }
-            ]
-            })
-            response = requests.post(
-                f'https://worktool.asrtts.cn/wework/sendRawMessage?robotId={robot_key}',
-                headers=headers,
-                data=data,
-            )
-            data = json.loads(response.text)
-            if data.get('code') != 200:
-                send_error_msg(f'企业微信机器人发送失败: {data}')
-            logger.info(response.text)
-            return
-
+    filename = os.path.basename(urllib.parse.urlparse(file_url).path)
+    # filetype = os.path.splitext(filename)[1]
+    # if filetype in ['.png', '.jpg', '.jpeg']:
+    headers = {
+        'User-Agent': 'Apifox/1.0.0 (https://www.apifox.cn)',
+        'Content-Type': 'application/json'
+    }
+    data = json.dumps({
+    "socketType": 2,
+    "list": [
+        {
+            "type": 218,
+            "titleList": [
+                robot_group_name
+            ],
+            "objectName": filename,
+            "fileUrl": file_url,
+            "fileType": type,
+            "extraText": markdown_msg
+        }
+    ]
+    })
+    response = requests.post(
+        f'https://worktool.asrtts.cn/wework/sendRawMessage?robotId={robot_key}',
+        headers=headers,
+        data=data,
+    )
+    data = json.loads(response.text)
+    if data.get('code') != 200:
+        send_error_msg(f'企业微信机器人发送失败: {data}')
+    logger.info(response.text)
+    return
 
 def send_wx_robot(wx_robot_key, markdown_msg):
     headers = {
@@ -326,7 +348,7 @@ def send_error_msg(text):
         send_worktool_robot(worktool_robot_key, worktool_robot_group_error, text)
     logger.error(text)
 
-def send_message(text, answer_key, image_key_list, image_urls, image_base64_list, voice_key):
+def send_message(text, answer_key, image_key_list, image_urls, image_base64_list, voice_key, voice_http_url):
     # title = '🌻小葵花妈妈课堂开课啦：'
     search_href = f'https://www.bing.com/search?q={answer_key}'
     text = re.sub('\n+', '\n', text or '')
@@ -367,7 +389,8 @@ def send_message(text, answer_key, image_key_list, image_urls, image_base64_list
         if worktool_robot_group_name := worktool_robot_group_study:
             # search_href = urllib.parse.quote(search_href, safe=':/?&=')
             # worktool_msg = f'{text}\n了解更多:{search_href}'
-            send_worktool_robot_image(worktool_robot_key, worktool_robot_group_name, text, image_urls)
+            send_worktool_robot_file(worktool_robot_key, worktool_robot_group_name, None, image_urls[0], 'image')
+            send_worktool_robot_file(worktool_robot_key, worktool_robot_group_name, text, voice_http_url, 'audio')
 
 def random_project():
     with open("study_category_expand.json", "r", encoding="utf-8") as f:
@@ -499,12 +522,13 @@ if __name__ == '__main__':
                 answer_key = answer.split('\n')[0]
                 voice_key = None
                 if azure_api_key:
-                    image_key_list, image_urls, image_base64_list = search_bing_image(answer_key, 2) or (None, None, None)
+                    image_key_list, image_urls, image_base64_list = search_bing_image(answer_key, 2) or (None, [], None)
                 if speech_key and service_region:
                     voice_output_file_path, voice_duration = text_to_voice(answer) or (None, None)
                     if voice_output_file_path and voice_duration:
                         voice_key = update_feishu_voice(voice_output_file_path, voice_duration)
-                send_message(answer, answer_key, image_key_list, image_urls, image_base64_list, voice_key)
+                        voice_http_url = upload_voice_file(voice_output_file_path, voice_duration)
+                send_message(answer, answer_key, image_key_list, image_urls, image_base64_list, voice_key, voice_http_url)
                 project['answer'] = answer
                 project['images'] = image_urls
                 project['time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')

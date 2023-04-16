@@ -43,3 +43,5 @@ ssml_templete = [
     '<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="zh-CN"><voice name="zh-CN-YunzeNeural"><mstts:express-as role="Default"><prosody rate="+20.00%">{}</prosody></mstts:express-as></voice></speak>', # 中老年-云泽
     '<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="zh-CN"><voice name="zh-CN-YunyangNeural"><mstts:express-as style="narration-professional" styledegree="2"><prosody rate="+20.00%">{}</prosody></mstts:express-as></voice></speak>', # 播音腔旁白-云扬
 ]
+
+voice_file_server = ''    # 语音文件的服务器地址，用于语音合成后的语音文件的下载，如果不需要可以不填
