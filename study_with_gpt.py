@@ -51,7 +51,7 @@ def search_bing_image(text, number):
     if len(query) < 5:
         query = text
     headers = {"Ocp-Apim-Subscription-Key": azure_api_key}
-    url = f"https://api.bing.microsoft.com/v7.0/images/search?q={query}&count={number * 2 + 2}" #多获取几张避免出现下载不了的图片
+    url = f"https://api.bing.microsoft.com/v7.0/images/search?q={query}&count={number * 2 + 2}&imageType=Photo&size=Large" #多获取几张避免出现下载不了的图片
     response = requests.get(url, headers=headers)
     data = response.json()
     if response.status_code != 200:
@@ -104,9 +104,12 @@ def get_feishu_token():
     return feishu_token
 
 def get_feishu_chats_id(chat_name):
+    feishu_token = get_feishu_token()
+    if not feishu_token:
+        return
     headers = {
         'Content-Type': 'application/json; charset=utf-8',
-        'Authorization': f'Bearer {get_feishu_token()}',
+        'Authorization': f'Bearer {feishu_token}',
     }
     response = requests.get('https://open.feishu.cn/open-apis/im/v1/chats?user_id_type=open_id&page_size=50', headers=headers)
     responsejson = json.loads(response.text)
@@ -121,12 +124,17 @@ def get_feishu_chats_id(chat_name):
         send_error_msg('数据获取异常', responsejson['msg'])
 
 def update_feishu_image(file):
+    feishu_token = get_feishu_token()
+    if not feishu_token:
+        return
     url = "https://open.feishu.cn/open-apis/im/v1/images"
     form = {'image_type': 'message',
             'image': (file)}
     multi_form = MultipartEncoder(form)
-    headers = {'Authorization': f'Bearer {get_feishu_token()}'}
-    headers['Content-Type'] = multi_form.content_type
+    headers = {
+        'Authorization': f'Bearer {feishu_token}',
+        'Content-Type': multi_form.content_type,
+    }
     response = requests.request("POST", url, headers=headers, data=multi_form)
     # logger.debug(response.headers['X-Tt-Logid'])  # for debug or oncall
     # logger.debug(response.content)  # Response
@@ -137,6 +145,9 @@ def update_feishu_image(file):
         send_error_msg('上传图片失败', response.text)
 
 def update_feishu_voice(voice_output_file_path, voice_duration):
+    feishu_token = get_feishu_token()
+    if not feishu_token:
+        return
     with open(voice_output_file_path, 'rb') as file:
         bytes_data = file.read()
         form = {
@@ -146,8 +157,10 @@ def update_feishu_voice(voice_output_file_path, voice_duration):
             'file': ('voice.opus', io.BytesIO(bytes_data), 'audio/opus'),
         }
         multi_form = MultipartEncoder(form)
-        headers = {'Authorization': f'Bearer {get_feishu_token()}'}
-        headers['Content-Type'] = multi_form.content_type
+        headers = {
+            'Authorization': f'Bearer {feishu_token}',
+            'Content-Type': multi_form.content_type,
+        }
         response = requests.request("POST", "https://open.feishu.cn/open-apis/im/v1/files", headers=headers, data=multi_form)
         logger.debug(response.headers['X-Tt-Logid'])  # for debug or oncall
         logger.debug(response.content)  # Response
@@ -178,8 +191,11 @@ def send_feishu_robot(feishu_robot_key, feishu_msg):
 
 
 def send_feishu_robot_audio(chat_id, voice_key):
+    feishu_token = get_feishu_token()
+    if not feishu_token:
+        return
     headers = {
-        'Authorization': f'Bearer {get_feishu_token()}',
+        'Authorization': f'Bearer {feishu_token}',
         'Content-Type': 'application/json',
     }
     data = json.dumps({
