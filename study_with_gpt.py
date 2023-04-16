@@ -46,9 +46,7 @@ headers = {
 
 def search_bing_image(text, number):
     # 去除中文字符
-    regex = re.compile(
-        f'[{re.escape(string.punctuation + string.whitespace + string.digits)}]'
-    )
+    regex = re.compile('[^a-zA-Z0-9 ]+')
     query = regex.sub('', text)
     if len(query) < 5:
         query = text
@@ -102,7 +100,7 @@ def get_feishu_token():
         })
         response = requests.post('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', headers=headers, data=data)
         responsejson = json.loads(response.text)
-        feishu_token = responsejson['tenant_access_token']
+        feishu_token = responsejson.get('tenant_access_token')
     return feishu_token
 
 def get_feishu_chats_id(chat_name):
@@ -309,7 +307,7 @@ def send_error_msg(text):
     if wx_robot_error:
         send_wx_robot(wx_robot_error, text)
     if worktool_robot_key and worktool_robot_group_error:
-        send_worktool_robot(worktool_robot_key, worktool_robot_group_error, text, image_urls)
+        send_worktool_robot(worktool_robot_key, worktool_robot_group_error, text)
     logger.error(text)
 
 def send_message(text, answer_key, image_key_list, image_urls, image_base64_list, voice_key):
