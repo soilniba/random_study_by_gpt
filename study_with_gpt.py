@@ -56,6 +56,9 @@ def search_bing_image(text, number):
     url = f"https://api.bing.microsoft.com/v7.0/images/search?q={query}&count={number * 2 + 2}" #多获取几张避免出现下载不了的图片
     response = requests.get(url, headers=headers)
     data = response.json()
+    if response.status_code != 200:
+        send_error_msg(f'搜索图片失败: {data}')
+        return
     if "value" in data:
         return down_up_images(data, number)
 
@@ -226,6 +229,9 @@ def send_worktool_robot(robot_key, robot_group_name, markdown_msg):
     logger.info(response.text)
 
 def send_worktool_robot_image(robot_key, robot_group_name, markdown_msg, image_urls):
+    if not image_urls:
+        send_worktool_robot(robot_key, robot_group_name, markdown_msg)
+        return
     for image_url in image_urls:
         filename = os.path.basename(urllib.parse.urlparse(image_url).path)
         filetype = os.path.splitext(filename)[1]
@@ -484,8 +490,9 @@ if __name__ == '__main__':
         for _ in range(5):
             if answer:= ask_gpt(project):
                 answer_key = answer.split('\n')[0]
+                voice_key = None
                 if azure_api_key:
-                    image_key_list, image_urls, image_base64_list = search_bing_image(answer_key, 2)
+                    image_key_list, image_urls, image_base64_list = search_bing_image(answer_key, 2) or (None, None, None)
                 if speech_key and service_region:
                     voice_output_file_path, voice_duration = text_to_voice(answer) or (None, None)
                     if voice_output_file_path and voice_duration:
