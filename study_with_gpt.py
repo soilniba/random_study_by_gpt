@@ -308,13 +308,15 @@ def send_error_msg(text):
         send_feishu_robot(feishu_robot_error, feishu_msg)
     if wx_robot_error:
         send_wx_robot(wx_robot_error, text)
+    if worktool_robot_key and worktool_robot_group_error:
+        send_worktool_robot(worktool_robot_key, worktool_robot_group_error, text, image_urls)
     logger.error(text)
 
 def send_message(text, answer_key, image_key_list, image_urls, image_base64_list, voice_key):
     # title = '🌻小葵花妈妈课堂开课啦：'
     search_href = f'https://www.bing.com/search?q={answer_key}'
     text = re.sub('\n+', '\n', text or '')
-    if feishu_robot_key := feishu_robot_study or feishu_robot_error:
+    if feishu_robot_key := feishu_robot_study:
         feishu_msg = {"content": []}
         # feishu_msg["title"] = title
         feishu_msg["content"].append([
@@ -341,14 +343,14 @@ def send_message(text, answer_key, image_key_list, image_urls, image_base64_list
         if voice_key:
             send_feishu_robot_audio(get_feishu_chats_id(feishu_group_name), voice_key)
         send_feishu_robot(feishu_robot_key, feishu_msg)
-    if wx_robot_key := wx_robot_study or wx_robot_error:
+    if wx_robot_key := wx_robot_study:
         # wx_msg = f'{title}\n{text}\n[搜索更多相关信息]({search_href})'
         wx_msg = f'{text}\n[搜索更多相关信息]({search_href})'
         send_wx_robot(wx_robot_key, wx_msg)
         for image_base64 in image_base64_list:
             send_wx_robot_image(wx_robot_key, image_base64)
     if worktool_robot_key:
-        if worktool_robot_group_name := worktool_robot_group_study or worktool_robot_group_error:
+        if worktool_robot_group_name := worktool_robot_group_study:
             # search_href = urllib.parse.quote(search_href, safe=':/?&=')
             # worktool_msg = f'{text}\n了解更多:{search_href}'
             send_worktool_robot_image(worktool_robot_key, worktool_robot_group_name, text, image_urls)
