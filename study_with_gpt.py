@@ -497,20 +497,47 @@ def text_to_voice(text):
         send_error_msg(f"语音合成被取消：{cancellation_details.reason}")
         if cancellation_details.reason == speechsdk.CancellationReason.Error:
             send_error_msg(f"错误详情：{cancellation_details.error_details}")
+csv_filename = 'study_answer_save.csv'
+
+def check_csv():
+    with open(csv_filename, encoding='utf-8') as csv_file:
+        csv_reader = csv.reader(csv_file)
+        header = next(csv_reader)
+        if 'answer_key' not in header:
+            # 如果CSV文件中不包含answer_key列，则执行一些操作
+            print('CSV文件中没有answer_key列！开始升级...')
+            # 在此处添加代码，执行您需要的操作
+            update_csv()
+
+def update_csv():
+    rows = []
+    with open(csv_filename, encoding='utf-8') as csv_file:
+        csv_reader = csv.DictReader(csv_file)
+        for row in csv_reader:
+            answer = row['answer']
+            title = answer.split('\n')[0]
+            row['answer_key'] = title
+            row['answer'] = answer.replace('\n', '\\n')
+            rows.append(row)
+
+    with open(csv_filename, 'w', newline='', encoding='utf-8') as csv_file:
+        fieldnames = ['time' ,'subcategorie' ,'sub2categorie' ,'project' ,'answer' ,'images', 'answer_key']
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
 
 def save_to_csv(project):
-    filename = 'study_answer_save.csv'
-
     # 如果文件不存在，则创建一个新的空文件
-    if not os.path.exists(filename):
-        with open(filename, 'w+', newline='', encoding='utf-8') as f:
+    if not os.path.exists(csv_filename):
+        with open(csv_filename, 'w+', newline='', encoding='utf-8') as f:
             pass
 
     # 打开CSV文件，使用追加模式
-    with open(filename, 'a', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=['time', 'subcategorie', 'sub2categorie', 'project', 'answer', 'images'])
+    with open(csv_filename, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=['time', 'subcategorie', 'sub2categorie', 'project', 'answer', 'images', 'answer_key'])
         # 如果文件是空的，则先写入表头
-        if os.path.getsize(filename) == 0:
+        if os.path.getsize(csv_filename) == 0:
             writer.writeheader()
         writer.writerow(project)  # 追加数据
 
@@ -531,9 +558,11 @@ if __name__ == '__main__':
                         voice_key = update_feishu_voice(voice_output_file_path, voice_duration)
                         voice_http_url = upload_voice_file(voice_output_file_path, voice_duration)
                 send_message(answer, answer_key, image_key_list, image_urls, image_base64_list, voice_key, voice_http_url)
-                project['answer'] = answer
+                project['answer_key'] = answer_key
+                project['answer'] = answer.replace('\n', '\\n')
                 project['images'] = image_urls
                 project['time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                check_csv()
                 save_to_csv(project)
                 break
-            time.sleep(10)
+            time.sleep(30)
