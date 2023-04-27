@@ -47,13 +47,8 @@ headers = {
 }
 
 def search_bing_image(text, number):
-    # 去除中文字符
-    regex = re.compile('[^a-zA-Z0-9 ]+')
-    query = regex.sub('', text)
-    if len(query) < 5:
-        query = text
     headers = {"Ocp-Apim-Subscription-Key": azure_api_key}
-    url = f"https://api.bing.microsoft.com/v7.0/images/search?q={query}&count={number * 2 + 2}&imageType=Photo&size=Large" #多获取几张避免出现下载不了的图片
+    url = f"https://api.bing.microsoft.com/v7.0/images/search?q={text}&count={number * 2 + 2}&imageType=Photo&size=Large" #多获取几张避免出现下载不了的图片
     response = requests.get(url, headers=headers)
     data = response.json()
     if response.status_code != 200:
@@ -393,8 +388,32 @@ def send_message(text, answer_key, image_key_list, image_urls, image_base64_list
             send_worktool_robot_file(worktool_robot_key, worktool_robot_group_name, None, image_urls[0], 'image')
             send_worktool_robot_file(worktool_robot_key, worktool_robot_group_name, text, voice_http_url, 'audio')
 
+json_storage_filename = 'study_storage.json'
+def update_use_repeat_num(subcategorie, sub2categorie, project, use_num, repeat_num = 0):
+    if not os.path.isfile(json_storage_filename):
+        # 如果JSON文件不存在，则创建一个新文件
+        with open(json_storage_filename, 'w', encoding='utf-8') as f:
+            json.dump({}, f, ensure_ascii=False, indent=4)
+        print(f'已创建新的JSON文件：{json_storage_filename}')
+
+    with open(json_storage_filename, "r+", encoding="utf-8") as f:
+        categories = json.load(f)
+        if subcategorie not in categories:
+            categories[subcategorie] = {}
+        if sub2categorie not in categories[subcategorie]:
+            categories[subcategorie][sub2categorie] = {}
+        if project not in categories[subcategorie][sub2categorie]:
+            categories[subcategorie][sub2categorie][project] = {'use_num': 0, 'repeat_num': 0}
+        categories[subcategorie][sub2categorie][project]['use_num'] += use_num
+        categories[subcategorie][sub2categorie][project]['repeat_num'] += repeat_num
+        f.seek(0)   #将文件指针移回文件开头，以便我们可以将更新后的数据写回文件的开头。
+        json.dump(categories, f, ensure_ascii=False, indent=4)
+        f.truncate()    #截断文件，以确保文件中的任何剩余内容都被删除，这是必需的，因为更新后的数据可能比原始数据短
+
+json_filename = 'study_category_expand.json'
+
 def random_project():
-    with open("study_category_expand.json", "r", encoding="utf-8") as f:
+    with open(json_filename, "r", encoding="utf-8") as f:
         categories = json.load(f)
 
     total_subcategories = len(categories)
@@ -416,7 +435,7 @@ def random_project():
             sub2categories_key, project_key = random_subcategorie(subcategories)
 
             # 将更新后的category.json写回文件
-            with open("study_category_expand.json", "w", encoding="utf-8") as f:
+            with open(json_filename, "w", encoding="utf-8") as f:
                 json.dump(categories, f, ensure_ascii=False, indent=4)
             return {
                 'subcategorie': subcategories_key,
@@ -499,6 +518,14 @@ def text_to_voice(text):
             send_error_msg(f"错误详情：{cancellation_details.error_details}")
 csv_filename = 'study_answer_save.csv'
 
+def find_key_in_csv(search_string):
+    with open(csv_filename, encoding='utf-8') as csv_file:
+        csv_reader = csv.DictReader(csv_file)
+        for row in csv_reader:
+            column_value = row['answer_key']
+            if search_string in column_value:
+                return True
+
 def check_csv():
     with open(csv_filename, encoding='utf-8') as csv_file:
         csv_reader = csv.reader(csv_file)
@@ -541,17 +568,29 @@ def save_to_csv(project):
             writer.writeheader()
         writer.writerow(project)  # 追加数据
 
+check_delay_time_s = 30
 if __name__ == '__main__':
     for _ in range(knowledge_number):
         project = random_project()
         logger.info(project)
-        for _ in range(5):
+        for _ in range(10):
             if answer:= ask_gpt(project):
                 answer_key = answer.split('\n')[0]
+                # 去除中文字符
+                regex = re.compile('[^a-zA-Z0-9 ]+')
+                answer_key_en = regex.sub('', answer_key)
+                if len(answer_key_en) < 5:
+                    answer_key_en = answer_key
+                if find_key_in_csv(answer_key_en):  #如果关键字重复则重来一次
+                    update_use_repeat_num(project['subcategorie'], project['sub2categorie'], project['project'], 0, 1)
+                    project = random_project()
+                    time.sleep(check_delay_time_s)
+                    break
+                update_use_repeat_num(project['subcategorie'], project['sub2categorie'], project['project'], 1)
                 voice_key = None
                 voice_http_url = None
                 if azure_api_key:
-                    image_key_list, image_urls, image_base64_list = search_bing_image(answer_key, 2) or (None, [], None)
+                    image_key_list, image_urls, image_base64_list = search_bing_image(answer_key_en, 2) or (None, [], None)
                 if speech_key and service_region:
                     voice_output_file_path, voice_duration = text_to_voice(answer) or (None, None)
                     if voice_output_file_path and voice_duration:
@@ -565,4 +604,4 @@ if __name__ == '__main__':
                 check_csv()
                 save_to_csv(project)
                 break
-            time.sleep(30)
+            time.sleep(check_delay_time_s)
