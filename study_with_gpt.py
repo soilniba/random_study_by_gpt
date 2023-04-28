@@ -570,6 +570,7 @@ def save_to_csv(project):
 
 check_delay_time_s = 30
 if __name__ == '__main__':
+    check_csv()
     for _ in range(knowledge_number):
         project = random_project()
         logger.info(project)
@@ -601,7 +602,6 @@ if __name__ == '__main__':
                 project['answer'] = answer.replace('\n', '\\n')
                 project['images'] = image_urls
                 project['time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                check_csv()
                 save_to_csv(project)
                 break
             time.sleep(check_delay_time_s)
