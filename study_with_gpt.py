@@ -583,6 +583,7 @@ if __name__ == '__main__':
                 if len(answer_key_en) < 5:
                     answer_key_en = answer_key
                 if find_key_in_csv(answer_key_en):  #如果关键字重复则重来一次
+                    logger.warning('重复了再来一次')
                     update_use_repeat_num(project['subcategorie'], project['sub2categorie'], project['project'], 0, 1)
                     project = random_project()
                     time.sleep(check_delay_time_s)
