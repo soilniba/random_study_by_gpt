@@ -49,10 +49,13 @@ headers = {
 def search_bing_image(text, number):
     headers = {"Ocp-Apim-Subscription-Key": azure_api_key}
     url = f"https://api.bing.microsoft.com/v7.0/images/search?q={text}&count={number * 2 + 2}&imageType=Photo&size=Large" #多获取几张避免出现下载不了的图片
-    response = requests.get(url, headers=headers)
-    data = response.json()
+    try:
+        response = requests.get(url, headers=headers)
+        data = response.json()
+    except Exception as e:
+        logger.error(f"图片搜索失败: {url}\n{e}")
     if response.status_code != 200:
-        send_error_msg(f'搜索图片失败: {data}')
+        send_error_msg(f'搜索图片返回异常: {data}')
         return
     if "value" in data:
         return down_up_images(data, number)
