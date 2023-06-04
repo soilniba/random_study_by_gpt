@@ -388,7 +388,8 @@ def send_message(text, answer_key, image_key_list, image_urls, image_base64_list
         if worktool_robot_group_name := worktool_robot_group_study:
             # search_href = urllib.parse.quote(search_href, safe=':/?&=')
             # worktool_msg = f'{text}\n了解更多:{search_href}'
-            send_worktool_robot_file(worktool_robot_key, worktool_robot_group_name, None, image_urls[0], 'image')
+            imgurl = image_urls[0] if image_urls else None
+            send_worktool_robot_file(worktool_robot_key, worktool_robot_group_name, None, imgurl, 'image')
             send_worktool_robot_file(worktool_robot_key, worktool_robot_group_name, text, voice_http_url, 'audio')
 
 json_storage_filename = 'study_storage.json'
