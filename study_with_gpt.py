@@ -52,13 +52,13 @@ def search_bing_image(text, number):
     try:
         response = requests.get(url, headers=headers)
         data = response.json()
+        if response.status_code != 200:
+            send_error_msg(f'搜索图片返回异常: {data}')
+            return
+        if "value" in data:
+            return down_up_images(data, number)
     except Exception as e:
         logger.error(f"图片搜索失败: {url}\n{e}")
-    if response.status_code != 200:
-        send_error_msg(f'搜索图片返回异常: {data}')
-        return
-    if "value" in data:
-        return down_up_images(data, number)
 
 def down_up_images(data, number):
     image_urls = [item["contentUrl"] for item in data["value"]]
