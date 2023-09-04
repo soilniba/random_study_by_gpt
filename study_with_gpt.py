@@ -52,13 +52,16 @@ headers = {
 def search_bing_image(text, number):
     headers = {"Ocp-Apim-Subscription-Key": azure_api_key}
     url = f"https://api.bing.microsoft.com/v7.0/images/search?q={text}&count={number * 2 + 2}&imageType=Photo&size=Large" #多获取几张避免出现下载不了的图片
-    response = requests.get(url, headers=headers)
-    data = response.json()
-    if response.status_code != 200:
-        send_error_msg(f'搜索图片失败: {data}')
-        return
-    if "value" in data:
-        return down_up_images(data, number)
+    try:
+        response = requests.get(url, headers=headers)
+        data = response.json()
+        if response.status_code != 200:
+            send_error_msg(f'搜索图片返回异常: {data}')
+            return
+        if "value" in data:
+            return down_up_images(data, number)
+    except Exception as e:
+        logger.error(f"图片搜索失败: {url}\n{e}")
 
 def down_up_images(data, number):
     image_urls = [item["contentUrl"] for item in data["value"]]
@@ -388,7 +391,8 @@ def send_message(text, answer_key, image_key_list, image_urls, image_base64_list
         if worktool_robot_group_name := worktool_robot_group_study:
             # search_href = urllib.parse.quote(search_href, safe=':/?&=')
             # worktool_msg = f'{text}\n了解更多:{search_href}'
-            send_worktool_robot_file(worktool_robot_key, worktool_robot_group_name, None, image_urls[0], 'image')
+            imgurl = image_urls[0] if image_urls else None
+            send_worktool_robot_file(worktool_robot_key, worktool_robot_group_name, None, imgurl, 'image')
             send_worktool_robot_file(worktool_robot_key, worktool_robot_group_name, text, voice_http_url, 'audio')
 
 json_storage_filename = 'study_storage.json'
@@ -596,6 +600,7 @@ if __name__ == '__main__':
                 if len(answer_key_en) < 5:
                     answer_key_en = answer_key
                 if find_key_in_csv(answer_key_en):  #如果关键字重复则重来一次
+                    logger.warning('重复了再来一次')
                     update_use_repeat_num(project['subcategorie'], project['sub2categorie'], project['project'], 0, 1)
                     project = random_project()
                     time.sleep(check_delay_time_s)
