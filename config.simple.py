@@ -23,6 +23,12 @@ openai_proxy = ''           # 第三方api的服务器地址，使用官方api�
 azure_api_key = ''          # azure的api_key，设置了才会启用自动参考图搜索，在https://azure.microsoft.com/zh-cn/free/免费申请
 knowledge_number = 2        # 每次发送几条知识，推荐两三条比较合适
 
+azure_enable = False                        # azure开关
+azure_openai_token = ''                     # azure的token
+azure_resource_name = ''                    # azure的地区id，如https://{RESOURCE_NAME}.openai.azure.com
+azure_api_version = '2023-07-01-preview'    # api版本，参见https://learn.microsoft.com/en-us/azure/cognitive-services/openai/reference#completions
+azure_deployment_name = 'gpt-4'             # 使用的模型，如，openai.azure.com/openai/deployments/{DEPLOYMENT_NAME}/chat/completions.
+
 # 提问prompt，可以根据自己的情况修改
 system_prompt = '你现在是{}领域的专家,你的服务对象为30来岁有三五年工作经验的游戏策划,请在考虑他知识阅历经验的基础上提供服务,请避免太过浅显和太过常见的知识,最好是对他日后工作生活有所帮助的知识.'
 user_prompt = '我希望了解一个{}中{}方面的知识点,请你为我提供一段5分钟左右的学习内容,以这个知识点的中英文名称作为开头(第一行只有中英文标题),介绍这个知识点并进行一些举例,讲解他的应用场景和优缺点,并为我提供一条扩展学习的文章(不需要链接)'

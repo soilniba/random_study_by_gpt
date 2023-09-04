@@ -5,6 +5,7 @@ import csv
 import gzip
 import json
 import time
+import openai
 import urllib
 import random
 import string
@@ -17,7 +18,7 @@ from PIL import Image
 from io import BytesIO
 from loguru import logger
 from pydub import AudioSegment
-from revChatGPT.V3 import Chatbot
+# from revChatGPT.V3 import Chatbot
 from requests_toolbelt import MultipartEncoder
 import azure.cognitiveservices.speech as speechsdk
 from config import *
@@ -34,7 +35,9 @@ if not openai_api_key:
     exit(1)
 # temperature: float = 0.5,         控制结果的随机性，如果希望结果更有创意可以尝试 0.9，或者希望有固定结果可以尝试 0.0
 # top_p: float = 1.0,               一个可用于代替 temperature 的参数，对应机器学习中 nucleus sampling（核采样），如果设置 0.1 意味着只考虑构成前 10% 概率质量的 tokens。 通常建议不要同时更改这两者。
-chatbot = Chatbot(api_key=openai_api_key, engine=gpt_model, proxy=openai_proxy, temperature = 0.9)
+# chatbot = Chatbot(api_key=openai_api_key, engine=gpt_model, proxy=openai_proxy, temperature = 0.9)
+openai.api_key = openai_api_key
+
 
 
 Cookie = ''
@@ -475,10 +478,20 @@ def ask_gpt(project):
     ]
     logger.info(message)
     try:
-        chatbot.reset(system_prompt=system_prompt_splice)
-        reply = chatbot.ask(user_prompt_splice)
-        tokens = chatbot.get_token_count()
-        logger.info(f"[ChatGPT] reply={reply}, total_tokens={tokens}")
+        # chatbot.reset(system_prompt=system_prompt_splice)
+        # reply = chatbot.ask(user_prompt_splice)
+        # tokens = chatbot.get_token_count()
+        # logger.info(f"[ChatGPT] reply={reply}, total_tokens={tokens}")
+        if azure_enable:
+            openai.api_type = "azure"
+            openai.api_key = azure_openai_token
+            openai.api_base = f"https://{azure_resource_name}.openai.azure.com"
+            openai.api_version = azure_api_version
+            chat_completion = openai.ChatCompletion.create(deployment_id=azure_deployment_name, messages=message)
+        else:
+            chat_completion = openai.ChatCompletion.create(model=gpt_model, messages=message)
+        reply = chat_completion.choices[0].message.content
+        logger.info(f"[ChatGPT] reply={reply}\ntotal_tokens={chat_completion.usage.total_tokens}")
         return reply
     except Exception as e:
         send_error_msg(f'openai api error:{e}')
