@@ -350,9 +350,13 @@ def send_error_msg(text):
         send_worktool_robot(worktool_robot_key, worktool_robot_group_error, text)
     logger.error(text)
 
-def send_message(text, answer_key, image_key_list, image_urls, image_base64_list, voice_key, voice_http_url):
+def send_message(text, answer_key, answer_key_en, answer_key_cn, image_key_list, image_urls, image_base64_list, voice_key, voice_http_url):
     # title = '🌻小葵花妈妈课堂开课啦：'
     search_href = f'https://www.bing.com/search?q={answer_key}'
+    url_encode = urllib.parse.quote(answer_key_cn, encoding='utf-8')
+    tree_href = f'https://explorer.globe.engineer/?q=%5B%22{url_encode}%22%5D&model=haiku'
+    # tree_href = f'https://explorer-search.fly.dev/submitSearch?query=%5B%22{answer_key_cn}%22%5D&model=haiku'
+
     text = re.sub('\n+', '\n', text or '')
     if feishu_robot_key := feishu_robot_study:
         feishu_msg = {"content": []}
@@ -378,6 +382,13 @@ def send_message(text, answer_key, image_key_list, image_urls, image_base64_list
                 }
                 for image_key in image_key_list
             ])
+        feishu_msg["content"].append([
+            {
+                "tag": "a",
+                "text": '扩展：相关知识树',
+                "href": tree_href
+            },
+        ])
         if voice_key:
             send_feishu_robot_audio(get_feishu_chats_id(feishu_group_name), voice_key)
         send_feishu_robot(feishu_robot_key, feishu_msg)
@@ -597,6 +608,8 @@ if __name__ == '__main__':
                 # 去除中文字符
                 regex = re.compile('[^a-zA-Z0-9 ]+')
                 answer_key_en = regex.sub('', answer_key)
+                regex = re.compile(r'[^\u4e00-\u9fa5]')
+                answer_key_cn = re.sub(regex, '', answer_key)
                 if len(answer_key_en) < 5:
                     answer_key_en = answer_key
                 if find_key_in_csv(answer_key_en):  #如果关键字重复则重来一次
@@ -615,7 +628,7 @@ if __name__ == '__main__':
                     if voice_output_file_path and voice_duration:
                         voice_key = update_feishu_voice(voice_output_file_path, voice_duration)
                         voice_http_url = upload_voice_file(voice_output_file_path, voice_duration)
-                send_message(answer, answer_key, image_key_list, image_urls, image_base64_list, voice_key, voice_http_url)
+                send_message(answer, answer_key, answer_key_en, answer_key_cn, image_key_list, image_urls, image_base64_list, voice_key, voice_http_url)
                 project['answer_key'] = answer_key
                 project['answer'] = answer.replace('\n', '\\n')
                 project['images'] = image_urls
