@@ -612,6 +612,10 @@ if __name__ == '__main__':
                 answer_key_cn = re.sub(regex, '', answer_key)
                 if len(answer_key_en) < 5:
                     answer_key_en = answer_key
+                regex = re.compile(r'[^\u4e00-\u9fa5]')
+                answer_key_cn = re.sub(regex, '', answer_key)
+                if len(answer_key_cn) < 5:
+                    answer_key_cn = answer_key
                 if find_key_in_csv(answer_key_en):  #如果关键字重复则重来一次
                     logger.warning('重复了再来一次')
                     update_use_repeat_num(project['subcategorie'], project['sub2categorie'], project['project'], 0, 1)
